@@ -1,0 +1,37 @@
+CREATE TABLE IF NOT EXISTS `folder` (
+  `create_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` TIMESTAMP NULL,
+  `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+  `name` VARCHAR(45) NOT NULL,
+  `type` INTEGER NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS `handbook` (
+  `create_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` TIMESTAMP NULL,
+  `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+  `title` VARCHAR(45) NOT NULL,
+  `type` INTEGER NULL DEFAULT 1,
+  `folder_id` INTEGER NOT NULL,
+  `content` TEXT NULL,
+  `alarm_time` TIMESTAMP NULL,
+  FOREIGN KEY (`folder_id`)
+    REFERENCES `folder` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+);
+
+CREATE TRIGGER update_folder_update_time
+AFTER UPDATE ON folder
+FOR EACH ROW
+BEGIN
+    UPDATE folder SET update_time = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER update_handbook_update_time
+AFTER UPDATE ON handbook
+FOR EACH ROW
+BEGIN
+    UPDATE folder SET update_time = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+
