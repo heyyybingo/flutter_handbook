@@ -1,7 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_handbook/utils/db.dart';
 import 'package:flutter_handbook/models/BaseModel.dart';
 import 'package:flutter_handbook/models/Folder.dart';
 import 'package:flutter_handbook/utils/logger.dart';
+import 'package:flutter_handbook/utils/notification.dart';
 import 'package:json_annotation/json_annotation.dart';
 part 'HandBook.g.dart';
 
@@ -40,7 +42,7 @@ class HandBook extends BaseModel {
     return HandBook(
         id: id,
         createTime: createTime,
-        updateTime: DateTime.now(),// only give a new updateTime
+        updateTime: DateTime.now(), // only give a new updateTime
         title: title,
         content: content,
         alarmTime: alarmTime,
@@ -53,6 +55,7 @@ class HandBook extends BaseModel {
 
 class HandBookSerivce {
   static String table = "handbook";
+  
   static Future<HandBook?> findHandBookById(int id) async {
     final db = await databaseHelper.database;
     final jsonMapList = await db.query(table, where: "id = ?", whereArgs: [id]);
@@ -70,13 +73,16 @@ class HandBookSerivce {
   static Future<void> deleteHandBookById(int id) async {
     final db = await databaseHelper.database;
     await db.delete(table, where: "id = ?", whereArgs: [id]);
+    await NotificationService().cancelNotification(id: id);
   }
 
   static Future<List<HandBook>> findHandBookByFolderIdOrderByUpdateTime(
       int folderId) async {
     final db = await databaseHelper.database;
     final jsonMapList = await db.query(table,
-        where: "folder_id = ?", whereArgs: [folderId], orderBy: "update_time desc");
+        where: "folder_id = ?",
+        whereArgs: [folderId],
+        orderBy: "update_time desc");
 
     final handbooks = jsonMapList.map((e) => HandBook.fromJson(e)).toList();
 
@@ -97,6 +103,7 @@ class HandBookSerivce {
   static Future<int> insertHandBook(HandBook handBook) async {
     final db = await databaseHelper.database;
     final id = await db.insert(table, handBook.copyNewHandBook().toJson());
+
     return id;
   }
 
@@ -104,13 +111,42 @@ class HandBookSerivce {
     final db = await databaseHelper.database;
     final id = await db.update(table, handBook.copyNewHandBook().toJson(),
         where: "id = ?", whereArgs: [handBook.id]);
+    await scheduleHandBookAlarmById(id);
     return id;
+  }
+
+  static Future<int> clearHandBookAlarmById(int id) async {
+    final db = await databaseHelper.database;
+    return await db.update(table, {"alarm_time": null},
+        where: "id = ?", whereArgs: [id]);
+  }
+
+  static Future<void> scheduleHandBookAlarmById(int id) async {
+  
+
+    final handBook = await findHandBookById(id);
+    if(handBook==null){
+      return;
+    }
+   
+    if (handBook?.alarmTime != null) {
+      NotificationService().scheduleNotification(
+          id: id,
+          title: handBook!.title!,
+          body: handBook.folder?.name ?? "",
+          notifyTime: handBook.alarmTime!,
+          payload: NotificationPayload(type: NotificationType.handbook,value: handBook)
+          );
+    } else {
+      NotificationService().cancelNotification(id: id);
+    }
   }
 
   static Future<List<HandBook>> findFolderByTitleOrContent(String text) async {
     final db = await databaseHelper.database;
     final jsonMapList = await db.query(table,
-        where: "title LIKE ? OR content LIKE ?", whereArgs: ['%$text%', '%$text%']);
+        where: "title LIKE ? OR content LIKE ?",
+        whereArgs: ['%$text%', '%$text%']);
 
     final handbooks = jsonMapList.map((e) => HandBook.fromJson(e)).toList();
 

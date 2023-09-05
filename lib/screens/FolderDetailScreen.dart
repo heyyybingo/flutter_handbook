@@ -72,7 +72,7 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
           content: Form(
             key: _folderUpdateForm,
             child: TextFormField(
-              initialValue: _folder?.name??'',
+              initialValue: _folder?.name ?? '',
               onSaved: (newValue) {
                 _folderUpdateFormModel.name = newValue ?? "";
               },
@@ -115,8 +115,8 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
       },
     );
   }
-  // today;one month;other
 
+  // today;one month;other
   List<Widget> _buildSeperateHandBookListByUpdateTimeRange() {
     DateTime now = DateTime.now();
     DateTime today = DateTime(now.year, now.month, now.day);
@@ -183,14 +183,69 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
         child: Icon(Icons.edit),
       ),
       appBar: AppBar(
+          actions: [
+            if (_folder?.id != null && _folder?.type == FolderType.CUSTOMIZE)
+              MenuAnchor(
+                  alignmentOffset: const Offset(-60, 0),
+                  builder: (BuildContext context, MenuController controller,
+                      Widget? child) {
+                    return IconButton(
+                        onPressed: () {
+                          if (controller.isOpen) {
+                            controller.close();
+                          } else {
+                            controller.open();
+                          }
+                        },
+                        icon: const Icon(Icons.more_horiz));
+                  },
+                  menuChildren: [
+                    MenuItemButton(
+                        leadingIcon: const Icon(
+                          Icons.delete_outlined,
+                          color: Colors.red,
+                        ),
+                        onPressed: () {
+                          showDialog(
+                              context: context,
+                              builder: (context) {
+                                return AlertDialog(
+                                  title: const Text("提示"),
+                                  content: const Text("请确认是否要删除"),
+                                  actions: [
+                                    TextButton(
+                                        onPressed: () async {},
+                                        child: const Text("取消")),
+                                    TextButton(
+                                        onPressed: () async {
+                                          await FolderService.deleteFolderById(
+                                              _folder!.id!);
+
+                                          eventBus.fire(FolderUpdateEvent());
+                                          if (context.mounted) {
+                                            Navigator.pop(context);
+                                            context.pop();
+                                          }
+                                        },
+                                        child: const Text("确认"))
+                                  ],
+                                );
+                              });
+                        },
+                        child: const Text(
+                          "删除",
+                          style: TextStyle(color: Colors.red),
+                        ))
+                  ])
+          ],
           title: GestureDetector(
-        onTap: () {
-          if (_folder?.type == FolderType.CUSTOMIZE) {
-            _updateFolderName();
-          }
-        },
-        child: Text(_folder?.name ?? ''),
-      )),
+            onTap: () {
+              if (_folder?.type == FolderType.CUSTOMIZE) {
+                _updateFolderName();
+              }
+            },
+            child: Text(_folder?.name ?? ''),
+          )),
       body: CustomScrollView(
           slivers: bodySliverList.isNotEmpty
               ? bodySliverList

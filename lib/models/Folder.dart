@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_handbook/models/HandBook.dart';
 import 'package:flutter_handbook/utils/db.dart';
 import 'package:flutter_handbook/models/BaseModel.dart';
 import 'package:flutter_handbook/utils/logger.dart';
@@ -94,12 +95,28 @@ class FolderService {
   }
 
   static Future<int> updateCustomizeFolder(Folder folder) async {
-    if (folder.type != FolderType.CUSTOMIZE) {
+    final oldFolder = await findFolderById(folder.id!);
+    if (oldFolder.type != FolderType.CUSTOMIZE) {
       throw Exception('不能修改内置目录');
     }
     final db = await databaseHelper.database;
     final id = await db.update(table, folder.toJson(),
         where: "id = ?", whereArgs: [folder.id]);
+    return id;
+  }
+
+  static Future<int> deleteFolderById(int folderId) async {
+    final oldFolder = await findFolderById(folderId);
+    if (oldFolder.type != FolderType.CUSTOMIZE) {
+      throw Exception('不能修改内置目录');
+    }
+    final db = await databaseHelper.database;
+    final handbooksInFolder =
+        await HandBookSerivce.findHandBookByFolderIdOrderByUpdateTime(folderId);
+    if (handbooksInFolder.isNotEmpty) {
+      throw Exception('目录中存在文件，请先清除文件后删除');
+    }
+    final id = await db.delete(table, where: "id = ?", whereArgs: [folderId]);
     return id;
   }
 }

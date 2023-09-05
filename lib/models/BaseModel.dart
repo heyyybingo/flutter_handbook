@@ -1,7 +1,9 @@
 import 'package:json_annotation/json_annotation.dart';
 
+part "BaseModel.g.dart";
+
 @JsonSerializable(includeIfNull: false)
-abstract class BaseModel {
+class BaseModel {
   // static String columnId = "id";
   // static String columnCreateTime = "create_time";
   // static String columnUpdateTime = "update_time";

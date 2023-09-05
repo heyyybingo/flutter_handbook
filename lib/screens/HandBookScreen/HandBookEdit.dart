@@ -1,10 +1,10 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_handbook/models/Folder.dart';
 import 'package:flutter_handbook/models/HandBook.dart';
 import 'package:flutter_handbook/utils/events.dart';
 import 'package:flutter_handbook/utils/logger.dart';
+import 'package:flutter_handbook/utils/notification.dart';
 import 'package:flutter_handbook/widgets/Sliver/SliverListHeader.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -80,7 +80,7 @@ class _HandBookEditState extends State<HandBookEdit> {
       // update mode
       await HandBookSerivce.updateHandBook(_handbook);
     }
-    
+
     eventBus.fire(HandBookUpdateEvent());
   }
 
@@ -91,7 +91,7 @@ class _HandBookEditState extends State<HandBookEdit> {
     final selectDate = await showDatePicker(
         context: context,
         initialDate: init,
-        firstDate: now,
+        firstDate: init,
         lastDate: nextYear);
 
     if (selectDate != null && context.mounted) {
@@ -181,6 +181,15 @@ class _HandBookEditState extends State<HandBookEdit> {
                           icon: const Icon(Icons.more_horiz));
                     },
                     menuChildren: [
+                      MenuItemButton(
+                          child: TextButton(
+                        child: Text("通知"),
+                        onPressed: () {
+
+                          HandBookSerivce.scheduleHandBookAlarmById(_handbook.id!);
+                        
+                        },
+                      )),
                       MenuItemButton(
                           leadingIcon: const Icon(Icons.info_outline),
                           onPressed: () {

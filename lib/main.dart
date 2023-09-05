@@ -1,15 +1,21 @@
-import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_handbook/models/HandBook.dart';
 import 'package:flutter_handbook/screens/FolderDetailScreen.dart';
 import 'package:flutter_handbook/screens/HandBookScreen/HandBookEdit.dart';
 import 'package:flutter_handbook/screens/SearchScreen.dart';
+import 'package:flutter_handbook/utils/logger.dart';
+import 'package:flutter_handbook/utils/notification.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'package:go_router/go_router.dart';
 import 'package:flutter_handbook/screens/HomeScreen/Home.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  NotificationService().init();
   runApp(const MyApp());
 }
 
@@ -41,21 +47,28 @@ final _router = GoRouter(
         final id = state.uri.queryParameters['id'];
         final folderId = state.uri.queryParameters['folderId'];
         return HandBookEdit(
-            id: int.tryParse(id ?? ""), folderId: int.parse(folderId ?? ''));
+            id: int.tryParse(id ?? ""), folderId: int.tryParse(folderId ?? ''));
       },
     )
   ],
 );
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   // This widget is the root of your application.
 
   @override
+  State<MyApp> createState() {
+    return _MyAppState();
+  }
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      localizationsDelegates: [
+      localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate
@@ -95,5 +108,50 @@ class MyApp extends StatelessWidget {
     //   ),
     //   home: const HomeScreen(),
     // );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _configureNotification();
+  }
+
+  @override
+  dispose() {
+    super.dispose();
+    _disposeNotification();
+  }
+
+  _disposeNotification() {
+    didReceiveNotificationStream.close();
+  }
+
+  _configureNotification() async {
+    final NotificationAppLaunchDetails? notificationAppLaunchDetails =
+        await NotificationService()
+            .flutterLocalNotificationsPlugin
+            .getNotificationAppLaunchDetails();
+    if (notificationAppLaunchDetails?.didNotificationLaunchApp == true &&
+        notificationAppLaunchDetails?.notificationResponse != null) {
+      _notificationEventHandler(
+          notificationAppLaunchDetails!.notificationResponse!);
+    }
+
+    didReceiveNotificationStream.stream.listen(_notificationEventHandler);
+  }
+
+  _notificationEventHandler(NotificationResponse event) {
+    if (event.payload != null) {
+      final NotificationPayload payload =
+          NotificationPayload.fromJson(jsonDecode(event.payload!));
+
+      logger.i("NotificationPayload ${payload.type} ${payload.value}");
+      switch (payload.type) {
+        case NotificationType.handbook:
+          final HandBook handbook = HandBook.fromJson(payload.value);
+          _router.push('/handBookEdit?id=${handbook.id}');
+          break;
+      }
+    }
   }
 }
